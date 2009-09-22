@@ -1,8 +1,11 @@
 package hudson.plugins.tfs.model;
 
 import java.io.Serializable;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import hudson.model.InvisibleAction;
+import hudson.plugins.tfs.util.ProjectPathUtil;
 
 /**
  * An action for storing TFS configuration data in a build 
@@ -43,8 +46,8 @@ public class WorkspaceConfiguration extends InvisibleAction implements Serializa
         return workfolder;
     }
 
-    public String getProjectPath() {
-        return projectPath;
+    public Set<Entry<String, String>> getProjectMappings() {
+        return ProjectPathUtil.getProjectMappings(projectPath, workfolder).entrySet();
     }
 
     public String getServerUrl() {

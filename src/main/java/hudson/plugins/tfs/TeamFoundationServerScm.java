@@ -40,6 +40,7 @@ import hudson.plugins.tfs.model.ChangeSet;
 import hudson.plugins.tfs.util.BuildVariableResolver;
 import hudson.plugins.tfs.util.BuildWorkspaceConfigurationRetriever;
 import hudson.plugins.tfs.util.BuildWorkspaceConfigurationRetriever.BuildWorkspaceConfiguration;
+import hudson.plugins.tfs.util.ProjectPathUtil;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
@@ -164,9 +165,9 @@ public class TeamFoundationServerScm extends SCM {
         }
         
         build.addAction(workspaceConfiguration);
-        CheckoutAction action = new CheckoutAction(workspaceConfiguration.getWorkspaceName(), workspaceConfiguration.getProjectPath(), workspaceConfiguration.getWorkfolder(), isUseUpdate());
+        CheckoutAction action = new CheckoutAction(workspaceConfiguration, isUseUpdate());
         try {
-            List<ChangeSet> list = action.checkout(server, workspaceFilePath, (build.getPreviousBuild() != null ? build.getPreviousBuild().getTimestamp() : null));
+            List<ChangeSet> list = action.checkout(server, workspaceFilePath, build.getPreviousBuild() != null ? build.getPreviousBuild().getTimestamp() : null);
             ChangeSetWriter writer = new ChangeSetWriter();
             writer.write(list, changelogFile);
         } catch (ParseException pe) {
@@ -184,10 +185,17 @@ public class TeamFoundationServerScm extends SCM {
         } else {
             Server server = createServer(new TfTool(getDescriptor().getTfExecutable(), launcher, listener, workspace), lastRun);
             try {
-                return (server.getProject(getProjectPath(lastRun)).getDetailedHistory(
-                            lastRun.getTimestamp(), 
-                            Calendar.getInstance()
-                        ).size() > 0);
+                for(String projectPath : ProjectPathUtil.getProjectPaths(getProjectPath(lastRun)))
+                {
+                    if(server.getProject(projectPath).getDetailedHistory(
+                              lastRun.getTimestamp(), 
+                              Calendar.getInstance()
+                          ).size() > 0)
+                    {
+                      return true;
+                    }
+                }
+                return false;
             } catch (ParseException pe) {
                 listener.fatalError(pe.getMessage());
                 throw new AbortException();
@@ -296,7 +304,8 @@ public class TeamFoundationServerScm extends SCM {
         public static final String WORKSPACE_NAME_REGEX = "[^\"/:<>\\|\\*\\?]+[^\\s\\.\"/:<>\\|\\*\\?]$";
         public static final String USER_AT_DOMAIN_REGEX = "\\w+@\\w+";
         public static final String DOMAIN_SLASH_USER_REGEX = "\\w+\\\\\\w+";
-        public static final String PROJECT_PATH_REGEX = "^\\$\\/.*";
+        public static final String PROJECT_PATH_REGEX = "^\\$\\/[^:;]*(\\s*:[^;]+)?(;\\s*\\$\\/[^:;]*(\\s*:[^;]+)?)*$";
+
         private String tfExecutable;
         
         protected DescriptorImpl() {

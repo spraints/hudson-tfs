@@ -1,8 +1,11 @@
 package hudson.plugins.tfs.model;
 
 import static org.hamcrest.CoreMatchers.*;
+import static org.junit.matchers.JUnitMatchers.*;
 import static org.junit.Assert.*;
 
+import java.util.Iterator;
+import java.util.Map.Entry;
 import org.junit.Test;
 
 public class WorkspaceConfigurationTest {
@@ -17,5 +20,11 @@ public class WorkspaceConfigurationTest {
         assertThat(one, not(new WorkspaceConfiguration("server", "aworkspace", "project", "workfolder")));
         assertThat(one, not(new WorkspaceConfiguration("server", "workspace", "aproject", "workfolder")));
         assertThat(one, not(new WorkspaceConfiguration("server", "workspace", "project", "aworkfolder")));
+    }
+
+    @Test public void assertAssumesRootMapping() {
+        WorkspaceConfiguration configuration = new WorkspaceConfiguration("server", "workspace", "$/path1", "workfolder");
+        Entry<String, String> mapping = (Entry<String, String>) configuration.getProjectMappings().toArray()[0];
+        assertEquals("workfolder", mapping.getValue());
     }
 }
